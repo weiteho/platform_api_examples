@@ -28,33 +28,32 @@ import com.openfin.desktop.platform.PlatformViewOptions;
 import com.openfin.desktop.platform.PlatformWindowOptions;
 
 public class PlatformApiExamples implements DesktopStateListener {
-	
+
 	private DesktopConnection desktopConnection;
 	private Thread callingThread;
 	private String uuidForStoredSnapshot;
-
 
 	PlatformApiExamples(Thread callingThread) throws DesktopException, DesktopIOException, IOException {
 		this.callingThread = callingThread;
 		RuntimeConfiguration runtimeConfiguration = new RuntimeConfiguration();
 		runtimeConfiguration.setRuntimeVersion("canary");
 		runtimeConfiguration.setAdditionalRuntimeArguments("--v=1");
-
 		this.desktopConnection = new DesktopConnection(UUID.randomUUID().toString());
 		this.desktopConnection.connect(runtimeConfiguration, this, 60);
 	}
-	
+
 	void dispose() throws DesktopException {
 		this.desktopConnection.disconnect();
 	}
-	
+
 	CompletableFuture<?> startFromManifestThenSaveSnapshot() {
 		System.out.println("startFromManifestThenSaveSnapshot......");
 		return Platform.startFromManifest(desktopConnection, "https://openfin.github.io/golden-prototype/public.json")
 				.thenComposeAsync(platform -> {
 					CompletableFuture<?> platformClosedFuture = new CompletableFuture<>();
 					platform.addEventListener("closed", a -> {
-						System.out.println("Platform created from startFromManifestThenSaveSnapshot[" + platform.getUuid() + "] closed.");
+						System.out.println("Platform created from startFromManifestThenSaveSnapshot["
+								+ platform.getUuid() + "] closed.");
 						platformClosedFuture.complete(null);
 					});
 
@@ -64,17 +63,19 @@ public class PlatformApiExamples implements DesktopStateListener {
 					catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-					
-					platform.getSnapshot().thenAcceptAsync(snapshot->{
+
+					platform.getSnapshot().thenAcceptAsync(snapshot -> {
 						try {
-							Files.write(Paths.get("./snapshot.json"), snapshot.toString().getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+							Files.write(Paths.get("./snapshot.json"), snapshot.toString().getBytes(),
+									StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+									StandardOpenOption.WRITE);
 							this.uuidForStoredSnapshot = platform.getUuid();
 							System.out.println("current snapshot saved.");
 						}
 						catch (IOException e) {
 							e.printStackTrace();
 						}
-					}).exceptionally(e->{
+					}).exceptionally(e -> {
 						System.out.println("error saving snapshot: " + e.getMessage());
 						return null;
 					});
@@ -82,7 +83,6 @@ public class PlatformApiExamples implements DesktopStateListener {
 				});
 	}
 
-	
 	CompletableFuture<Void> startAndApplyStoredSnapshot() {
 		if (this.uuidForStoredSnapshot != null) {
 			System.out.println("startAndApplyStoredSnapshot......");
@@ -90,7 +90,8 @@ public class PlatformApiExamples implements DesktopStateListener {
 			return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
 				CompletableFuture<Void> platformClosedFuture = new CompletableFuture<>();
 				platform.addEventListener("closed", a -> {
-					System.out.println("Platform created from startAndApplyStoredSnapshot[" + platform.getUuid() + "] closed.");
+					System.out.println(
+							"Platform created from startAndApplyStoredSnapshot[" + platform.getUuid() + "] closed.");
 					platformClosedFuture.complete(null);
 				});
 				PlatformSnapshotOptions opts = new PlatformSnapshotOptions();
@@ -105,7 +106,6 @@ public class PlatformApiExamples implements DesktopStateListener {
 		}
 	}
 
-	
 	CompletableFuture<Void> startAndCreateWindow() {
 		System.out.println("startAndCreateWindow......");
 		PlatformOptions platformOptions = new PlatformOptions(UUID.randomUUID().toString());
@@ -128,7 +128,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 			return platformClosedFuture;
 		});
 	}
-	
+
 	CompletableFuture<Void> startAndCreateViewThenCloseView() {
 		System.out.println("startAndCreateViewThenCloseView......");
 		String uuid = UUID.randomUUID().toString();
@@ -136,14 +136,15 @@ public class PlatformApiExamples implements DesktopStateListener {
 		return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
 			CompletableFuture<Void> platformClosedFuture = new CompletableFuture<>();
 			platform.addEventListener("closed", a -> {
-				System.out.println("Platform created from startAndCreateViewThenCloseView[" + platform.getUuid() + "] closed.");
+				System.out.println(
+						"Platform created from startAndCreateViewThenCloseView[" + platform.getUuid() + "] closed.");
 				platformClosedFuture.complete(null);
 			});
 
 			PlatformViewOptions viewOpts = new PlatformViewOptions();
 			viewOpts.setName("google");
 			viewOpts.setUrl("http://www.google.com");
-			platform.createView(viewOpts, null).thenAcceptAsync(view->{
+			platform.createView(viewOpts, null).thenAcceptAsync(view -> {
 				try {
 					Thread.sleep(10000);
 				}
@@ -165,7 +166,8 @@ public class PlatformApiExamples implements DesktopStateListener {
 		return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
 			CompletableFuture<Void> platformClosedFuture = new CompletableFuture<>();
 			platform.addEventListener("closed", a -> {
-				System.out.println("Platform created from startWithHandCraftedSnapshot[" + platform.getUuid() + "] closed.");
+				System.out.println(
+						"Platform created from startWithHandCraftedSnapshot[" + platform.getUuid() + "] closed.");
 				platformClosedFuture.complete(null);
 			});
 			LayoutContentItemStateOptions itemState1 = new LayoutContentItemStateOptions();
@@ -176,7 +178,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 			itemOpts1.setComponentName("view");
 			itemOpts1.setTitle("Test Snapshot - OpenFin");
 			itemOpts1.setLayoutContentItemStateOptions(itemState1);
-			
+
 			LayoutContentItemStateOptions itemState2 = new LayoutContentItemStateOptions();
 			itemState2.setName("viewGoogle");
 			itemState2.setUrl("https://www.google.com");
@@ -185,7 +187,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 			itemOpts2.setComponentName("view");
 			itemOpts2.setTitle("Test Snapshot - Google");
 			itemOpts2.setLayoutContentItemStateOptions(itemState2);
-			
+
 			LayoutContentOptionsImpl content = new LayoutContentOptionsImpl();
 			content.setType("stack");
 			content.setContent(itemOpts1, itemOpts2);
@@ -195,7 +197,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 
 			WindowOptions winOpts = new WindowOptions();
 			winOpts.setLayoutOptions(layoutOptions);
-			
+
 			PlatformSnapshot codedSnapshot = new PlatformSnapshot();
 			codedSnapshot.setWindows(winOpts);
 			platform.applySnapshot(codedSnapshot, null);
@@ -206,47 +208,44 @@ public class PlatformApiExamples implements DesktopStateListener {
 
 	@Override
 	public void onReady() {
-		//do not block the the thread in event callbacks, do things in different threads.
-		CompletableFuture.runAsync(()->{
+		// do not block the the thread in event callbacks, do things in different
+		// threads.
+		CompletableFuture.runAsync(() -> {
 			try {
 				this.startFromManifestThenSaveSnapshot().get();
 				this.startAndApplyStoredSnapshot().get();
 				this.startAndCreateWindow().get();
 				this.startAndCreateViewThenCloseView().get();
 				this.startWithHandCraftedSnapshot().get();
-				
+
 				this.desktopConnection.disconnect();
 			}
 			catch (InterruptedException | ExecutionException | DesktopException e) {
 				e.printStackTrace();
 			}
 			finally {
-				
+
 			}
 		});
 	}
-
 
 	@Override
 	public void onClose(String error) {
 		LockSupport.unpark(this.callingThread);
 	}
 
-
 	@Override
 	public void onError(String reason) {
 	}
-
 
 	@Override
 	public void onMessage(String message) {
 	}
 
-
 	@Override
 	public void onOutgoingMessage(String message) {
 	}
-	
+
 	public static void main(String[] args) {
 		try {
 			new PlatformApiExamples(Thread.currentThread());
