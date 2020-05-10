@@ -14,6 +14,7 @@ import com.openfin.desktop.DesktopConnection;
 import com.openfin.desktop.DesktopException;
 import com.openfin.desktop.DesktopIOException;
 import com.openfin.desktop.DesktopStateListener;
+import com.openfin.desktop.Identity;
 import com.openfin.desktop.LayoutContentItemOptions;
 import com.openfin.desktop.LayoutContentItemStateOptions;
 import com.openfin.desktop.LayoutContentOptionsImpl;
@@ -205,6 +206,49 @@ public class PlatformApiExamples implements DesktopStateListener {
 			return platformClosedFuture;
 		});
 	}
+	
+	CompletableFuture<Void> startAndCreateViewsThenReparentView() {
+		System.out.println("startAndCreateViewsThenReparentView......");
+		String uuid = UUID.randomUUID().toString();
+		PlatformOptions platformOptions = new PlatformOptions(uuid);
+		return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
+			CompletableFuture<Void> platformClosedFuture = new CompletableFuture<>();
+			platform.addEventListener("closed", a -> {
+				System.out.println(
+						"Platform created from startAndCreateViewsThenReparentView[" + platform.getUuid() + "] closed.");
+				platformClosedFuture.complete(null);
+			});
+			
+			PlatformViewOptions viewOpts1 = new PlatformViewOptions();
+			viewOpts1.setName("openfin");
+			viewOpts1.setUrl("http://www.openfin.co");
+			
+			CompletableFuture<Identity> view1WindowIdentityFuture = platform.createView(viewOpts1, null)
+					.thenComposeAsync(view -> {
+						return view.getCurrentWindow();
+					}).thenApplyAsync(win -> {
+						return win.getIdentity();
+					});
+
+			PlatformViewOptions viewOpts2 = new PlatformViewOptions();
+			viewOpts2.setName("google");
+			viewOpts2.setUrl("http://www.google.com");
+			platform.createView(viewOpts2, null).thenApplyAsync(view -> {
+				try {
+					Thread.sleep(10000);
+				}
+				catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				return view.getIdentity();
+			}).thenCombineAsync(view1WindowIdentityFuture, (viewIdentity, targetIdentity)->{
+				platform.reparentView(viewIdentity, targetIdentity);
+				return null;
+			});
+			return platformClosedFuture;
+		});
+	}
+
 
 	@Override
 	public void onReady() {
@@ -217,6 +261,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 				this.startAndCreateWindow().get();
 				this.startAndCreateViewThenCloseView().get();
 				this.startWithHandCraftedSnapshot().get();
+				this.startAndCreateViewsThenReparentView().get();
 
 				this.desktopConnection.disconnect();
 			}
