@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.LockSupport;
 
@@ -47,7 +48,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 		this.desktopConnection.disconnect();
 	}
 
-	CompletableFuture<?> startFromManifestThenSaveSnapshot() {
+	CompletionStage<?> startFromManifestThenSaveSnapshot() {
 		System.out.println("startFromManifestThenSaveSnapshot......");
 		return Platform.startFromManifest(desktopConnection, "https://openfin.github.io/golden-prototype/public.json")
 				.thenComposeAsync(platform -> {
@@ -84,7 +85,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 				});
 	}
 
-	CompletableFuture<Void> startAndApplyStoredSnapshot() {
+	CompletionStage<Void> startAndApplyStoredSnapshot() {
 		if (this.uuidForStoredSnapshot != null) {
 			System.out.println("startAndApplyStoredSnapshot......");
 			PlatformOptions platformOptions = new PlatformOptions(uuidForStoredSnapshot);
@@ -107,7 +108,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 		}
 	}
 
-	CompletableFuture<Void> startAndCreateWindow() {
+	CompletionStage<Void> startAndCreateWindow() {
 		System.out.println("startAndCreateWindow......");
 		PlatformOptions platformOptions = new PlatformOptions(UUID.randomUUID().toString());
 		PlatformWindowOptions defaultWinOpts = new PlatformWindowOptions();
@@ -130,7 +131,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 		});
 	}
 
-	CompletableFuture<Void> startAndCreateViewThenCloseView() {
+	CompletionStage<Void> startAndCreateViewThenCloseView() {
 		System.out.println("startAndCreateViewThenCloseView......");
 		String uuid = UUID.randomUUID().toString();
 		PlatformOptions platformOptions = new PlatformOptions(uuid);
@@ -160,7 +161,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 		});
 	}
 
-	CompletableFuture<Void> startWithHandCraftedSnapshot() {
+	CompletionStage<Void> startWithHandCraftedSnapshot() {
 		System.out.println("startWithHandCraftedSnapshot......");
 		String uuid = UUID.randomUUID().toString();
 		PlatformOptions platformOptions = new PlatformOptions(uuid);
@@ -207,7 +208,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 		});
 	}
 	
-	CompletableFuture<Void> startAndCreateViewsThenReparentView() {
+	CompletionStage<Void> startAndCreateViewsThenReparentView() {
 		System.out.println("startAndCreateViewsThenReparentView......");
 		String uuid = UUID.randomUUID().toString();
 		PlatformOptions platformOptions = new PlatformOptions(uuid);
@@ -223,7 +224,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 			viewOpts1.setName("openfin");
 			viewOpts1.setUrl("http://www.openfin.co");
 			
-			CompletableFuture<Identity> view1WindowIdentityFuture = platform.createView(viewOpts1, null)
+			CompletionStage<Identity> view1WindowIdentityFuture = platform.createView(viewOpts1, null)
 					.thenComposeAsync(view -> {
 						return view.getCurrentWindow();
 					}).thenApplyAsync(win -> {
@@ -256,12 +257,12 @@ public class PlatformApiExamples implements DesktopStateListener {
 		// threads.
 		CompletableFuture.runAsync(() -> {
 			try {
-				this.startFromManifestThenSaveSnapshot().get();
-				this.startAndApplyStoredSnapshot().get();
-				this.startAndCreateWindow().get();
-				this.startAndCreateViewThenCloseView().get();
-				this.startWithHandCraftedSnapshot().get();
-				this.startAndCreateViewsThenReparentView().get();
+				this.startFromManifestThenSaveSnapshot().toCompletableFuture().get();
+				this.startAndApplyStoredSnapshot().toCompletableFuture().get();
+				this.startAndCreateWindow().toCompletableFuture().get();
+				this.startAndCreateViewThenCloseView().toCompletableFuture().get();
+				this.startWithHandCraftedSnapshot().toCompletableFuture().get();
+				this.startAndCreateViewsThenReparentView().toCompletableFuture().get();
 
 				this.desktopConnection.disconnect();
 			}
