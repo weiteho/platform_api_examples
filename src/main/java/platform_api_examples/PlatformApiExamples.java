@@ -14,14 +14,12 @@ import com.openfin.desktop.DesktopConnection;
 import com.openfin.desktop.DesktopException;
 import com.openfin.desktop.DesktopIOException;
 import com.openfin.desktop.DesktopStateListener;
-import com.openfin.desktop.Identity;
 import com.openfin.desktop.LayoutContentItemOptions;
 import com.openfin.desktop.LayoutContentItemStateOptions;
 import com.openfin.desktop.LayoutContentOptionsImpl;
 import com.openfin.desktop.LayoutOptions;
 import com.openfin.desktop.RuntimeConfiguration;
 import com.openfin.desktop.WindowOptions;
-import com.openfin.desktop.platform.AutoResizeOptions;
 import com.openfin.desktop.platform.Platform;
 import com.openfin.desktop.platform.PlatformOptions;
 import com.openfin.desktop.platform.PlatformSnapshot;
@@ -51,7 +49,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 	}
 	
 	CompletableFuture<?> startFromManifestThenSaveSnapshot() {
-		System.out.println("startFromManifest......");
+		System.out.println("startFromManifestThenSaveSnapshot......");
 		return Platform.startFromManifest(desktopConnection, "https://openfin.github.io/golden-prototype/public.json")
 				.thenComposeAsync(platform -> {
 					CompletableFuture<?> platformClosedFuture = new CompletableFuture<>();
@@ -87,7 +85,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 	
 	CompletableFuture<Void> startAndApplyStoredSnapshot() {
 		if (this.uuidForStoredSnapshot != null) {
-			System.out.println("startAndApplySnapshot......");
+			System.out.println("startAndApplyStoredSnapshot......");
 			PlatformOptions platformOptions = new PlatformOptions(uuidForStoredSnapshot);
 			return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
 				CompletableFuture<Void> platformClosedFuture = new CompletableFuture<>();
@@ -132,7 +130,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 	}
 	
 	CompletableFuture<Void> startAndCreateViewThenCloseView() {
-		System.out.println("startAndCreateView......");
+		System.out.println("startAndCreateViewThenCloseView......");
 		String uuid = UUID.randomUUID().toString();
 		PlatformOptions platformOptions = new PlatformOptions(uuid);
 		return Platform.start(desktopConnection, platformOptions).thenComposeAsync(platform -> {
@@ -251,7 +249,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 	
 	public static void main(String[] args) {
 		try {
-			PlatformApiExamples example = new PlatformApiExamples(Thread.currentThread());
+			new PlatformApiExamples(Thread.currentThread());
 			LockSupport.park();
 		}
 		catch (DesktopException | DesktopIOException | IOException e) {
