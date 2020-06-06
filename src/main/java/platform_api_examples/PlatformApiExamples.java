@@ -15,7 +15,9 @@ import com.openfin.desktop.DesktopConnection;
 import com.openfin.desktop.DesktopException;
 import com.openfin.desktop.DesktopIOException;
 import com.openfin.desktop.DesktopStateListener;
+import com.openfin.desktop.EventListener;
 import com.openfin.desktop.Identity;
+import com.openfin.desktop.Layout;
 import com.openfin.desktop.LayoutContentItemOptions;
 import com.openfin.desktop.LayoutContentItemStateOptions;
 import com.openfin.desktop.LayoutContentOptionsImpl;
@@ -38,7 +40,7 @@ public class PlatformApiExamples implements DesktopStateListener {
 	PlatformApiExamples(Thread callingThread) throws DesktopException, DesktopIOException, IOException {
 		this.callingThread = callingThread;
 		RuntimeConfiguration runtimeConfiguration = new RuntimeConfiguration();
-		runtimeConfiguration.setRuntimeVersion("canary");
+		runtimeConfiguration.setRuntimeVersion("stable");
 		runtimeConfiguration.setAdditionalRuntimeArguments("--v=1");
 		this.desktopConnection = new DesktopConnection(UUID.randomUUID().toString());
 		this.desktopConnection.connect(runtimeConfiguration, this, 60);
@@ -126,7 +128,11 @@ public class PlatformApiExamples implements DesktopStateListener {
 			WindowOptions winOpts = new WindowOptions();
 			winOpts.setName("google");
 			winOpts.setUrl("http://www.google.com");
-			platform.createWindow(winOpts);
+			platform.createWindow(winOpts).thenAccept(window->{
+				window.executeJavaScript("fin.System.getVersion()", obj->{
+					System.out.println("return: " + obj.toString());
+				}, null);
+			});
 			return platformClosedFuture;
 		});
 	}
@@ -161,6 +167,38 @@ public class PlatformApiExamples implements DesktopStateListener {
 		});
 	}
 
+	LayoutOptions createLayoutOptions(String prefix) {
+		LayoutContentItemStateOptions itemState1 = new LayoutContentItemStateOptions();
+		itemState1.setName(prefix + "viewOpenFin");
+		itemState1.setUrl("https://www.openfin.co");
+		itemState1.setProcessAffinity("ps_1");
+		LayoutContentItemOptions itemOpts1 = new LayoutContentItemOptions();
+		itemOpts1.setType("component");
+		itemOpts1.setComponentName("view");
+		itemOpts1.setTitle("Test Snapshot - OpenFin");
+		itemOpts1.setLayoutContentItemStateOptions(itemState1);
+
+		LayoutContentItemStateOptions itemState2 = new LayoutContentItemStateOptions();
+		itemState2.setName(prefix + "viewGoogle");
+		itemState2.setUrl("https://www.google.com");
+		itemState2.setProcessAffinity("ps_1");
+		LayoutContentItemOptions itemOpts2 = new LayoutContentItemOptions();
+		itemOpts2.setType("component");
+		itemOpts2.setComponentName("view");
+		itemOpts2.setTitle("Test Snapshot - Google");
+		itemOpts2.setLayoutContentItemStateOptions(itemState2);
+
+		LayoutContentOptionsImpl content = new LayoutContentOptionsImpl();
+		content.setType("stack");
+		content.setContent(itemOpts1, itemOpts2);
+
+		LayoutOptions layoutOptions = new LayoutOptions();
+		layoutOptions.setContent(content);
+
+		
+		return layoutOptions;
+	}
+	
 	CompletionStage<Void> startWithHandCraftedSnapshot() {
 		System.out.println("startWithHandCraftedSnapshot......");
 		String uuid = UUID.randomUUID().toString();
@@ -172,37 +210,20 @@ public class PlatformApiExamples implements DesktopStateListener {
 						"Platform created from startWithHandCraftedSnapshot[" + platform.getUuid() + "] closed.");
 				platformClosedFuture.complete(null);
 			});
-			LayoutContentItemStateOptions itemState1 = new LayoutContentItemStateOptions();
-			itemState1.setName("viewOpenFin");
-			itemState1.setUrl("https://www.openfin.co");
-			LayoutContentItemOptions itemOpts1 = new LayoutContentItemOptions();
-			itemOpts1.setType("component");
-			itemOpts1.setComponentName("view");
-			itemOpts1.setTitle("Test Snapshot - OpenFin");
-			itemOpts1.setLayoutContentItemStateOptions(itemState1);
-
-			LayoutContentItemStateOptions itemState2 = new LayoutContentItemStateOptions();
-			itemState2.setName("viewGoogle");
-			itemState2.setUrl("https://www.google.com");
-			LayoutContentItemOptions itemOpts2 = new LayoutContentItemOptions();
-			itemOpts2.setType("component");
-			itemOpts2.setComponentName("view");
-			itemOpts2.setTitle("Test Snapshot - Google");
-			itemOpts2.setLayoutContentItemStateOptions(itemState2);
-
-			LayoutContentOptionsImpl content = new LayoutContentOptionsImpl();
-			content.setType("stack");
-			content.setContent(itemOpts1, itemOpts2);
-
-			LayoutOptions layoutOptions = new LayoutOptions();
-			layoutOptions.setContent(content);
+			
+			
 
 			WindowOptions winOpts = new WindowOptions();
-			winOpts.setLayoutOptions(layoutOptions);
+			winOpts.setLayoutOptions(this.createLayoutOptions("A_"));
 
 			PlatformSnapshot codedSnapshot = new PlatformSnapshot();
 			codedSnapshot.setWindows(winOpts);
-			platform.applySnapshot(codedSnapshot, null);
+			
+			platform.applySnapshot(codedSnapshot, null).thenRun(()->{
+				WindowOptions opt2 = new WindowOptions(winOpts.getJsonCopy());
+				opt2.setLayoutOptions(this.createLayoutOptions("B_"));
+				platform.createWindow(opt2);
+			});
 
 			return platformClosedFuture;
 		});
@@ -226,15 +247,33 @@ public class PlatformApiExamples implements DesktopStateListener {
 			
 			CompletionStage<Identity> view1WindowIdentityFuture = platform.createView(viewOpts1, null)
 					.thenComposeAsync(view -> {
+						
 						return view.getCurrentWindow();
 					}).thenApplyAsync(win -> {
 						return win.getIdentity();
 					});
 
+			EventListener targetChagnedListener = e -> {
+				System.out.println(
+						"target changed, e=" + e.getEventObject().toString());
+			};
+
 			PlatformViewOptions viewOpts2 = new PlatformViewOptions();
 			viewOpts2.setName("google");
 			viewOpts2.setUrl("http://www.google.com");
 			platform.createView(viewOpts2, null).thenApplyAsync(view -> {
+
+				view.addEventListener("target-changed", targetChagnedListener);				
+				
+				view.findInPage("google", null);
+				view.getPrinters().thenAcceptAsync(printers->{
+					
+					printers.forEach(printerInfo->{
+						System.out.println("displayName: " + printerInfo.getDisplayname());
+						System.out.println("default printer: " + printerInfo.isDefault());
+						System.out.println("======\n\n");
+					});
+				});
 				try {
 					Thread.sleep(10000);
 				}
@@ -243,13 +282,55 @@ public class PlatformApiExamples implements DesktopStateListener {
 				}
 				return view.getIdentity();
 			}).thenCombineAsync(view1WindowIdentityFuture, (viewIdentity, targetIdentity)->{
-				platform.reparentView(viewIdentity, targetIdentity);
+				platform.reparentView(viewIdentity, targetIdentity).thenApplyAsync(reparentedView->{
+					//reparentedView.printAsync(null);
+					return reparentedView;
+				}).thenAcceptAsync(reparentedView->{
+					reparentedView.removeEventListener("target-changed", targetChagnedListener).thenAccept(ack->{
+						if (ack.isSuccessful()) {
+							System.out.println("targetChangedListener removed");
+						}
+						else {
+							System.out.println("unabele to remove targetChangedListener, reason: " + ack.getReason());
+						}
+					});
+					
+					reparentedView.focusAsync().thenRun(()->{
+						
+						reparentedView.executeJavaScript("fin.System.getVersion()").thenAccept(result->{
+							System.out.println("executeJavaScript result: " + result.toString());
+						});
+						
+						reparentedView.addEventListener("destroyed", e->{
+							System.out.println("view [" + reparentedView.getIdentity().getUuid() + "," + reparentedView.getIdentity().getName() + "] destroyed.");
+						});
+						reparentedView.showDeveloperTools();
+						
+						Layout layout = Layout.wrap(targetIdentity, desktopConnection);
+						layout.getConfig().thenApply(config->{
+							System.out.println("getConfig: " + config);
+							return config;
+						}).thenApply(config ->{
+							layout.applyPreset("grid");
+							return config;
+						}).thenAccept(config->{
+							try {
+								Thread.sleep(10000);
+							}
+							catch (InterruptedException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							layout.replace(config);
+						});
+						
+					});
+				});
 				return null;
 			});
 			return platformClosedFuture;
 		});
 	}
-
 
 	@Override
 	public void onReady() {
@@ -263,7 +344,6 @@ public class PlatformApiExamples implements DesktopStateListener {
 				this.startAndCreateViewThenCloseView().toCompletableFuture().get();
 				this.startWithHandCraftedSnapshot().toCompletableFuture().get();
 				this.startAndCreateViewsThenReparentView().toCompletableFuture().get();
-
 				this.desktopConnection.disconnect();
 			}
 			catch (InterruptedException | ExecutionException | DesktopException e) {
