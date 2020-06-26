@@ -11,6 +11,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.LockSupport;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.openfin.desktop.DesktopConnection;
 import com.openfin.desktop.DesktopException;
 import com.openfin.desktop.DesktopIOException;
@@ -126,12 +129,10 @@ public class PlatformApiExamples implements DesktopStateListener {
 				platformClosedFuture.complete(null);
 			});
 			WindowOptions winOpts = new WindowOptions();
-			winOpts.setName("google");
-			winOpts.setUrl("http://www.google.com");
+			winOpts.setLayoutOptions(this.createLayoutOptions("createWindowTest-"));
+			winOpts.setName("MyWinID: " + UUID.randomUUID().toString());
 			platform.createWindow(winOpts).thenAccept(window->{
-				window.executeJavaScript("fin.System.getVersion()", obj->{
-					System.out.println("return: " + obj.toString());
-				}, null);
+				System.out.println("window identity: " + window.getIdentity());
 			});
 			return platformClosedFuture;
 		});
@@ -172,6 +173,11 @@ public class PlatformApiExamples implements DesktopStateListener {
 		itemState1.setName(prefix + "viewOpenFin");
 		itemState1.setUrl("https://www.openfin.co");
 		itemState1.setProcessAffinity("ps_1");
+//		JSONObject script = new JSONObject();
+//		script.put("url", "urlToMyPreloadScript");
+//		JSONArray preloadScripts = new JSONArray();
+//		preloadScripts.put(script);
+//		itemState1.put("preloadScripts", preloadScripts);
 		LayoutContentItemOptions itemOpts1 = new LayoutContentItemOptions();
 		itemOpts1.setType("component");
 		itemOpts1.setComponentName("view");
